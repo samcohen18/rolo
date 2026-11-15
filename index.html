@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rolo">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Rolo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/*
+VOICE: a personal notebook, quiet and quick; the person is the content.
+IDEA: the index card in a desk file: white card, red top rule, faint blue lines.
+PICTURE: each person opens as their own ruled card; the list is the card file.
+COLOUR and TYPE: white and ink, ballpoint blue for actions, index-card red only on the rule; system UI type.
+LAYOUT: one phone column, max 680px, fixed bottom bar with the add button.
+*/
+:root{--bg:#f3f4f6;--card:#fff;--ink:#15171b;--mute:#5f6672;--line:#e1e4ea;--rule:#dbe6f7;--blue:#2747d6;--blue-soft:#e9edfc;--red:#d8433b;--ok:#1d7a4a;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1014;--card:#181b21;--ink:#eceef2;--mute:#9aa1ad;--line:#2a2f38;--rule:#1f2a3d;--blue:#8a9cff;--blue-soft:#20273f;--red:#ff7a70;--ok:#5fd394;color-scheme:dark}}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;overflow-x:clip;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+a{color:var(--blue);text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:680px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px 24px}
+h1{font-size:32px;line-height:1.1;margin:8px 0 14px;letter-spacing:-.02em}
+h2{font-size:17px;margin:26px 0 10px}
+.mute{color:var(--mute)}.small{font-size:13px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+@media (prefers-color-scheme:dark){.btn.pri{color:#0e1014}}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--blue);padding:0 8px}
+.btn.danger{color:var(--red)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.search{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px;margin:0 -2px}
+input:not([type]),input[type=text],input[type=search],input[type=email],input[type=password],input[type=tel],input[type=url],input[type=date],select,textarea{width:100%;min-height:46px;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:16px}
+textarea{min-height:96px;resize:vertical;line-height:1.45}
+label{display:block;font-size:13px;font-weight:600;color:var(--mute);margin:14px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;min-height:32px;padding:0 11px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-size:14px;font-weight:500;border:0;cursor:pointer}
+.chip.plain{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.list{background:var(--card);border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.row{display:flex;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line);color:var(--ink)}
+.row:first-child{border-top:0}
+.row .t{flex:1}
+.row .n{font-weight:600}
+.row .s{font-size:14px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .snip{font-size:13px;color:var(--mute);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row .when{font-size:12px;color:var(--mute);white-space:nowrap}
+mark{background:var(--blue-soft);color:inherit;border-radius:3px;padding:0 1px}
+.av{flex:none;width:44px;height:44px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-weight:700;font-size:16px;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.lg{width:88px;height:88px;font-size:30px}
+.banner{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--ink);margin-bottom:10px}
+.banner b{font-size:22px;color:var(--blue);min-width:28px;text-align:center}
+.card{background:var(--card);border-radius:16px;border:1px solid var(--line);padding:18px 16px 14px;overflow:hidden}
+.card .head{display:flex;gap:14px;align-items:center;padding-bottom:14px;border-bottom:2px solid var(--red)}
+.card .head .nm{font-size:26px;font-weight:700;line-height:1.1;letter-spacing:-.01em}
+.card .sub{color:var(--mute);margin-top:4px}
+.card .body{padding-top:6px;line-height:28px;background-image:repeating-linear-gradient(to bottom,transparent 0 27px,var(--rule) 27px 28px);background-position:0 7px}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px;margin:12px 0 4px}
+.act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer}
+.act svg{width:20px;height:20px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.loop{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.loop:first-child{border-top:0;padding-top:0}
+.loop .t{flex:1}
+.loop .tp{font-weight:600}
+.loop.done .tp{text-decoration:line-through;color:var(--mute)}
+.tl{position:relative;padding-left:20px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.ev{position:relative;padding:0 0 16px}
+.ev::before{content:"";position:absolute;left:-19px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--card);border:2px solid var(--blue)}
+.ev .d{font-size:13px;color:var(--mute);display:flex;gap:8px;align-items:center}
+.ev .k{font-size:12px;font-weight:600;color:var(--blue)}
+.ev .x{white-space:pre-wrap;margin-top:2px}
+.ev .del{margin-left:auto;border:0;background:none;color:var(--mute);font-size:13px;cursor:pointer;min-height:28px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 10px}
+@media(max-width:420px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+.tabbar .in{max-width:680px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;align-items:center}
+.tab{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;font-weight:600;color:var(--mute);min-height:50px;justify-content:center;position:relative}
+.tab.on{color:var(--blue)}
+.tab svg{width:24px;height:24px}
+.tab .dot{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px}
+.addbtn{justify-self:center;width:54px;height:54px;border-radius:18px;background:var(--blue);color:#fff;display:grid;place-items:center;box-shadow:0 6px 18px rgba(39,71,214,.35)}
+@media (prefers-color-scheme:dark){.addbtn{color:#0e1014}}
+.addbtn svg{width:28px;height:28px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.empty{text-align:center;padding:40px 16px;color:var(--mute)}
+.stack>*+*{margin-top:10px}
+.inline{display:flex;gap:8px;align-items:center}
+.inline>input,.inline>select{flex:1}
+pre.code{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12px;overflow:auto;max-height:220px;white-space:pre}
+details summary{cursor:pointer;color:var(--blue);font-weight:600;min-height:40px;display:flex;align-items:center}
+.hint{font-size:13px;color:var(--mute);margin-top:6px}
+@media (prefers-reduced-motion:no-preference){.view{animation:in .18s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="mute">Loading…</p></div>
+<nav class="tabbar" id="tabbar" hidden><div class="in">
+  <a class="tab" data-t="home" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.7 3.1 2.5 3.5 5.2"/></svg>People</a>
+  <a class="tab" data-t="loops" href="#loops"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5"/><path d="M20 4v4.5h-4.5"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.5"/><path d="M4 20v-4.5h4.5"/></svg>In the loop<span class="dot" id="loopdot" hidden></span></a>
+  <a class="addbtn" href="#new" aria-label="Add person"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
+  <a class="tab" data-t="settings" href="#settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>More</a>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+{
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }));
+const isUuid = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s||''));
+const today = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const normDate = s => { s = String(s||'').trim(); const m = s.match(/^(\d{4})(?:-(\d{1,2}))?(?:-(\d{1,2}))?$/); if (!m) return ''; return m[1] + (m[2] ? '-'+m[2].padStart(2,'0') : '') + (m[3] ? '-'+m[3].padStart(2,'0') : ''); };
+const sortKey = s => { s = normDate(s); if (!s) return ''; return s.length===4 ? s+'-01-01' : s.length===7 ? s+'-01' : s; };
+const fmtDate = s => { s = normDate(s); if (!s) return ''; const [y,m,d] = s.split('-'); if (!m) return y; if (!d) return MON[+m-1]+' '+y; return MON[+m-1]+' '+(+d)+', '+y; };
+const ago = s => { const k = sortKey(s); if (!k) return ''; const days = Math.round((Date.now() - new Date(k+'T12:00:00'))/864e5); if (days < 1) return 'today'; if (days < 7) return days+'d ago'; if (days < 60) return Math.round(days/7)+'w ago'; if (days < 365) return Math.round(days/30)+'mo ago'; const y = days/365; return (y<2? y.toFixed(1).replace('.0','') : Math.round(y))+'y ago'; };
+const initials = n => String(n||'?').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase() || '?';
+const first = n => String(n||'').trim().split(/\s+/)[0] || '';
+const list = s => Array.isArray(s) ? s.map(x => String(x).trim()).filter(Boolean) : String(s||'').split(',').map(x => x.trim()).filter(Boolean);
+const telNum = p => String(p||'').replace(/[^\d+]/g, '');
+let toastT;
+const toast = (m, ms=2600) => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); };
+const KINDS = {met:'Met', call:'Call', coffee:'Coffee / meal', event:'Event', note:'Note', update:'Update sent', msg:'Message'};
+const CADENCE = [[0,'No regular check-in'],[14,'Every 2 weeks'],[30,'Every month'],[90,'Every 3 months'],[180,'Every 6 months'],[365,'Every year']];
+
+/* ---------- local cache (IndexedDB) ---------- */
+const idb = {
+  db: null,
+  open() { return new Promise((res, rej) => { const r = indexedDB.open('rolo', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(this.db = r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { try { const d = this.db || await this.open(); return await new Promise(res => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch { return null; } },
+  async set(k, v) { try { const d = this.db || await this.open(); d.transaction('kv', 'readwrite').objectStore('kv').put(v, k); } catch {} },
+  async del(k) { try { const d = this.db || await this.open(); d.transaction('kv', 'readwrite').objectStore('kv').delete(k); } catch {} }
+};
+const cfgGet = () => { try { return JSON.parse(localStorage.getItem('rolo_cfg') || 'null'); } catch { return null; } };
+const cfgSet = c => { try { localStorage.setItem('rolo_cfg', JSON.stringify(c)); } catch {} };
+
+/* ---------- state ---------- */
+let sb = null, user = null, people = [], byId = new Map(), hayMap = new Map();
+const photos = new Map();
+let homeQ = '', loopQ = '', homeLimit = 60;
+
+function norm(p) {
+  p = Object.assign({}, p);
+  p.id = isUuid(p.id) ? p.id : uid();
+  p.name = String(p.name || '').trim() || 'Unnamed';
+  for (const k of ['schools', 'tags']) p[k] = list(p[k]);
+  p.metDate = normDate(p.metDate);
+  p.cadence = +p.cadence || 0;
+  p.timeline = (Array.isArray(p.timeline) ? p.timeline : []).filter(e => e && (e.text || e.kind)).map(e => ({ id: e.id || uid(), date: normDate(e.date) || p.metDate || today(), kind: KINDS[e.kind] ? e.kind : 'note', text: String(e.text || '').trim() }));
+  p.loops = (Array.isArray(p.loops) ? p.loops : []).filter(l => l && l.topic).map(l => ({ id: l.id || uid(), topic: String(l.topic).trim(), note: String(l.note || '').trim(), done: !!l.done, doneDate: l.doneDate || '', added: normDate(l.added) || today() }));
+  return p;
+}
+function lastSeen(p) { let k = sortKey(p.metDate); for (const e of p.timeline) { const s = sortKey(e.date); if (s > k) k = s; } return k; }
+function lastContact(p) { let k = sortKey(p.metDate); for (const e of p.timeline) if (e.kind !== 'note') { const s = sortKey(e.date); if (s > k) k = s; } return k; }
+function hay(p) {
+  let h = hayMap.get(p.id);
+  if (!h) { const via = metThroughName(p); h = [p.name, p.role, p.company, p.location, p.howMet, via, p.schools.join(' '), p.tags.join(' '), p.about, p.email, p.phone, p.loops.map(l => l.topic + ' ' + l.note).join(' '), p.timeline.map(e => e.text).join(' ')].join(' \n ').toLowerCase(); hayMap.set(p.id, h); }
+  return h;
+}
+function metThroughName(p) { if (p.metThroughId && byId.get(p.metThroughId)) return byId.get(p.metThroughId).name; return p.metThrough || ''; }
+function setPeople(arr) { people = arr.map(norm); byId = new Map(people.map(p => [p.id, p])); hayMap.clear(); sortPeople(); }
+function sortPeople() { people.sort((a, b) => (lastSeen(b) || '').localeCompare(lastSeen(a) || '') || a.name.localeCompare(b.name)); }
+const cacheKey = () => 'people:' + (user ? user.id : 'x');
+let cacheT; function cacheSoon() { clearTimeout(cacheT); cacheT = setTimeout(() => idb.set(cacheKey(), people), 400); }
+const openLoops = () => { const out = []; for (const p of people) for (const l of p.loops) if (!l.done) out.push({ p, l }); return out; };
+const dueCheckins = () => { const t = today(); return people.filter(p => p.cadence).map(p => { const lc = lastContact(p); const due = lc ? new Date(new Date(lc + 'T12:00:00').getTime() + p.cadence * 864e5) : new Date(0); return { p, due, over: Math.round((new Date(t + 'T12:00:00') - due) / 864e5) }; }).filter(x => x.over >= 0).sort((a, b) => b.over - a.over); };
+
+/* ---------- data sync ---------- */
+async function loadAll() {
+  const all = []; let from = 0;
+  for (;;) {
+    const { data, error } = await sb.from('people').select('id,data').range(from, from + 999);
+    if (error) throw error;
+    all.push(...data.map(r => Object.assign({}, r.data, { id: r.id })));
+    if (data.length < 1000) break; from += 1000;
+  }
+  setPeople(all); cacheSoon();
+}
+const strip = p => { const d = Object.assign({}, p); delete d.id; return d; };
+async function save(p, quiet) {
+  p = norm(p); p.updatedAt = new Date().toISOString(); if (!p.createdAt) p.createdAt = p.updatedAt;
+  const isNew = !byId.has(p.id);
+  if (isNew) people.push(p); else people[people.findIndex(x => x.id === p.id)] = p;
+  byId.set(p.id, p); hayMap.delete(p.id); sortPeople(); cacheSoon(); updateDot();
+  const { error } = await sb.from('people').upsert({ id: p.id, data: strip(p), updated_at: p.updatedAt });
+  if (error) { toast('Not saved to the cloud: ' + error.message, 5000); return null; }
+  if (!quiet) toast('Saved');
+  return p;
+}
+async function removePerson(id) {
+  const { error } = await sb.from('people').delete().eq('id', id);
+  if (error) { toast('Could not delete: ' + error.message, 5000); return false; }
+  people = people.filter(p => p.id !== id); byId.delete(id); photos.delete(id); idb.del('ph:' + id); cacheSoon(); updateDot(); return true;
+}
+async function getPhoto(id) {
+  if (photos.has(id)) return photos.get(id);
+  let img = await idb.get('ph:' + id);
+  if (!img) { const { data } = await sb.from('photos').select('img').eq('person_id', id).maybeSingle(); img = data && data.img; if (img) idb.set('ph:' + id, img); }
+  if (img) photos.set(id, img);
+  return img || null;
+}
+function resizeImage(file, max = 480) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const im = new Image();
+    im.onload = () => { const s = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.78)); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Could not read that image')); };
+    im.src = url;
+  });
+}
+
+/* ---------- rendering bits ---------- */
+const avatar = (p, cls = '') => { const ph = photos.get(p.id); return `<div class="av ${cls}" data-av="${p.id}">${ph ? `<img alt="" src="${ph}">` : esc(initials(p.name))}</div>`; };
+const subline = p => [p.role, p.company].filter(Boolean).join(' at ') || p.howMet || p.tags.slice(0, 3).join(', ');
+function hl(text, toks) { let s = esc(text); for (const t of toks) { if (t.length < 2) continue; s = s.replace(new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); } return s; }
+function snippet(p, toks) {
+  const sources = [p.about, p.howMet, ...p.timeline.map(e => e.text), ...p.loops.map(l => l.topic + ' ' + l.note), p.schools.join(', '), p.tags.join(', ')].filter(Boolean);
+  for (const src of sources) { const low = src.toLowerCase(); const t = toks.find(t => low.includes(t)); if (t) { const i = low.indexOf(t); const a = Math.max(0, i - 40); return (a ? '…' : '') + src.slice(a, i + 80).replace(/\s+/g, ' ') + (i + 80 < src.length ? '…' : ''); } }
+  return '';
+}
+function personRow(p, toks) {
+  const sn = toks && toks.length && !toks.every(t => (p.name + ' ' + subline(p)).toLowerCase().includes(t)) ? snippet(p, toks) : '';
+  const ls = lastSeen(p);
+  return `<a class="row" href="#p/${p.id}">${avatar(p)}<div class="t"><div class="n">${toks ? hl(p.name, toks) : esc(p.name)}</div><div class="s">${toks ? hl(subline(p), toks) : esc(subline(p))}</div>${sn ? `<div class="snip">${hl(sn, toks)}</div>` : ''}</div>${ls ? `<div class="when">${ago(ls)}</div>` : ''}</a>`;
+}
+function hydrateAvatars() { app.querySelectorAll('[data-av]').forEach(async el => { const p = byId.get(el.dataset.av); if (!p || !p.hasPhoto || el.querySelector('img')) return; const img = await getPhoto(p.id); if (img && el.isConnected) el.innerHTML = `<img alt="" src="${img}">`; }); }
+function updateDot() { const n = openLoops().length; const d = $('#loopdot'); if (!d) return; d.hidden = !n; d.textContent = n > 99 ? '99+' : n; }
+function setTab(t) { document.querySelectorAll('.tab').forEach(a => a.classList.toggle('on', a.dataset.t === t)); }
+const I = {
+  sms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  call: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="8" r="4"/><path d="M3 20c.8-3.6 3.6-6 7-6 1.4 0 2.6.4 3.7 1M18 14v6M15 17h6"/></svg>'
+};
+const smsHref = (p, body) => `sms:${telNum(p.phone)}${body ? '&body=' + encodeURIComponent(body) : ''}`;
+
+/* ---------- views ---------- */
+function viewHome() {
+  setTab('home');
+  const toks = homeQ.toLowerCase().split(/\s+/).filter(Boolean);
+  let res = people, html = '';
+  if (toks.length) {
+    res = people.filter(p => { const h = hay(p); return toks.every(t => h.includes(t)); });
+    res.sort((a, b) => (+b.name.toLowerCase().includes(toks[0]) - +a.name.toLowerCase().includes(toks[0])));
+  }
+  html += `<div class="view"><h1>People</h1><div class="search"><input type="search" id="q" placeholder="Search names, companies, schools, sports, notes…" value="${esc(homeQ)}" autocomplete="off" enterkeyhint="search"></div>`;
+  if (!people.length) {
+    html += `<div class="empty"><p style="font-size:18px;color:var(--ink);font-weight:600">No one here yet</p><p>Tap + to add someone you just met, or bring in a batch of past notes from More → Import.</p><p><a class="btn pri" href="#new">Add a person</a> <a class="btn" href="#import">Import</a></p></div></div>`;
+    app.innerHTML = html; bindHomeSearch(); return;
+  }
+  if (!toks.length) {
+    const ol = openLoops().length, due = dueCheckins();
+    if (ol) html += `<a class="banner" href="#loops"><b>${ol}</b><div><div style="font-weight:600">Updates you owe people</div><div class="small mute">When something happens, see who to tell</div></div></a>`;
+    if (due.length) html += `<h2>Time to check in</h2><div class="list">${due.slice(0, 5).map(x => personRow(x.p)).join('')}</div>`;
+    const counts = new Map();
+    for (const p of people) for (const v of [p.company, ...p.schools, ...p.tags]) if (v) { const k = v.trim(); counts.set(k, (counts.get(k) || 0) + 1); }
+    const top = [...counts].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    if (top.length) html += `<h2>Browse</h2><div class="chips">${top.map(([k, n]) => `<button class="chip" data-q="${esc(k)}">${esc(k)} <span style="opacity:.6;margin-left:4px">${n}</span></button>`).join('')}</div>`;
+    html += `<h2>Everyone <span class="mute small">· ${people.length}</span></h2>`;
+  } else html += `<p class="small mute" style="margin:0 0 8px">${res.length} ${res.length === 1 ? 'match' : 'matches'}</p>`;
+  html += res.length ? `<div class="list">${res.slice(0, homeLimit).map(p => personRow(p, toks.length ? toks : null)).join('')}</div>` : `<div class="empty">Nobody matches “${esc(homeQ)}”.</div>`;
+  if (res.length > homeLimit) html += `<p style="text-align:center"><button class="btn" id="more">Show more</button></p>`;
+  html += '</div>';
+  app.innerHTML = html; bindHomeSearch(); hydrateAvatars();
+  app.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { homeQ = b.dataset.q; homeLimit = 60; viewHome(); });
+  const m = $('#more'); if (m) m.onclick = () => { homeLimit += 200; viewHome(); };
+}
+function bindHomeSearch() {
+  const q = $('#q'); if (!q) return; let t;
+  q.oninput = () => { clearTimeout(t); t = setTimeout(() => { homeQ = q.value; homeLimit = 60; const pos = q.selectionStart; viewHome(); const n = $('#q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch {} }, 180); };
+}
+
+function viewPerson(id) {
+  setTab('');
+  const p = byId.get(id); if (!p) { app.innerHTML = `<div class="empty">That person isn't here anymore. <a href="#">Back to People</a></div>`; return; }
+  const via = p.metThroughId && byId.get(p.metThroughId);
+  const introduced = people.filter(x => x.metThroughId === p.id);
+  const metBits = [p.howMet && esc(p.howMet), p.metDate && fmtDate(p.metDate), via ? `through <a href="#p/${via.id}">${esc(via.name)}</a>` : p.metThrough ? 'through ' + esc(p.metThrough) : ''].filter(Boolean);
+  const open = p.loops.filter(l => !l.done), done = p.loops.filter(l => l.done);
+  const tl = [...p.timeline].sort((a, b) => sortKey(b.date).localeCompare(sortKey(a.date)));
+  const acts = [];
+  if (p.phone) acts.push(`<a class="act" href="${smsHref(p)}">${I.sms}Text</a>`, `<a class="act" href="tel:${telNum(p.phone)}">${I.call}Call</a>`);
+  if (p.email) acts.push(`<a class="act" href="mailto:${esc(p.email)}">${I.mail}Email</a>`);
+  if (p.linkedin) acts.push(`<a class="act" href="${esc(/^https?:/.test(p.linkedin) ? p.linkedin : 'https://' + p.linkedin)}" target="_blank" rel="noopener">${I.link}LinkedIn</a>`);
+  acts.push(`<button class="act" id="vcf">${I.save}To iPhone</button>`);
+  const cad = CADENCE.find(c => c[0] === p.cadence);
+  const cadNote = p.cadence ? (() => { const d = dueCheckins().find(x => x.p.id === p.id); return `${cad ? cad[1] : 'Every ' + p.cadence + ' days'} · ${d ? '<b style="color:var(--red)">due now</b>' : 'last contact ' + (ago(lastContact(p)) || 'never')}`; })() : '';
+
+  app.innerHTML = `<div class="view">
+  <div class="top"><a class="btn ghost" href="#">‹ People</a><a class="btn ghost" href="#edit/${p.id}">Edit</a></div>
+  <div class="card"><div class="head">${avatar(p, 'lg')}<div><div class="nm">${esc(p.name)}</div><div class="sub">${esc([p.role, p.company].filter(Boolean).join(' at '))}${p.location ? (p.role || p.company ? ' · ' : '') + esc(p.location) : ''}</div></div></div>
+    <div class="body">${metBits.length ? `<div><span class="mute">Met:</span> ${metBits.join(' · ')}</div>` : ''}
+    ${p.about ? `<div style="white-space:pre-wrap">${esc(p.about)}</div>` : ''}
+    ${p.schools.length || p.tags.length ? `<div class="chips" style="margin-top:8px">${p.schools.map(s => `<a class="chip plain" href="#" data-s="${esc(s)}">${esc(s)}</a>`).join('')}${p.tags.map(s => `<a class="chip" href="#" data-s="${esc(s)}">${esc(s)}</a>`).join('')}</div>` : ''}
+    ${!metBits.length && !p.about && !p.schools.length && !p.tags.length ? `<div class="mute">No details yet. <a href="#edit/${p.id}">Add some</a></div>` : ''}</div>
+  </div>
+  <div class="actions">${acts.join('')}</div>
+  ${p.phone || p.email ? `<p class="small mute" style="margin:4px 2px 0">${esc([p.phone, p.email].filter(Boolean).join(' · '))}</p>` : ''}
+
+  <h2>Keep them in the loop about</h2>
+  <div class="sec">
+    ${open.length ? open.map(l => `<div class="loop"><div class="t"><div class="tp">${esc(l.topic)}</div>${l.note ? `<div class="small mute">${esc(l.note)}</div>` : ''}</div><button class="btn sm" data-done="${l.id}">Updated</button></div>`).join('') : '<p class="small mute" style="margin:0 0 4px">Nothing yet. Add things they\'d want to hear about, e.g. “my paper getting published” or “if I take the Stripe offer”.</p>'}
+    <form id="addloop" class="inline" style="margin-top:10px"><input type="text" name="topic" placeholder="Tell them when…" autocomplete="off"><button class="btn sm pri">Add</button></form>
+    ${done.length ? `<details style="margin-top:8px"><summary>${done.length} done</summary>${done.map(l => `<div class="loop done"><div class="t"><div class="tp">${esc(l.topic)}</div><div class="small mute">Updated ${fmtDate(l.doneDate)}</div></div><button class="btn sm ghost" data-undo="${l.id}">Undo</button></div>`).join('')}</details>` : ''}
+    ${cadNote ? `<p class="small" style="margin:10px 0 0">Check-in: ${cadNote}</p>` : ''}
+  </div>
+
+  <h2>Timeline</h2>
+  <form id="addev" class="sec stack">
+    <textarea name="text" placeholder="What did you talk about? Use the mic on your keyboard to dictate."></textarea>
+    <div class="grid2"><select name="kind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}"${k === 'note' ? ' selected' : ''}>${v}</option>`).join('')}</select><input type="date" name="date" value="${today()}"></div>
+    <button class="btn pri" style="width:100%">Add to timeline</button>
+  </form>
+  <div class="tl" style="margin-top:16px">${tl.length ? tl.map(e => `<div class="ev"><div class="d"><span>${fmtDate(e.date)}</span><span class="k">${KINDS[e.kind] || 'Note'}</span><button class="del" data-del="${e.id}" aria-label="Delete entry">Delete</button></div>${e.text ? `<div class="x">${esc(e.text)}</div>` : ''}</div>`).join('') : '<p class="small mute">No entries yet.</p>'}</div>
+
+  ${introduced.length ? `<h2>Introduced you to</h2><div class="list">${introduced.map(x => personRow(x)).join('')}</div>` : ''}
+  </div>`;
+  hydrateAvatars();
+
+  app.querySelectorAll('[data-s]').forEach(a => a.onclick = e => { e.preventDefault(); homeQ = a.dataset.s; location.hash = ''; });
+  $('#vcf').onclick = () => downloadVcf(p);
+  $('#addloop').onsubmit = async e => { e.preventDefault(); const t = e.target.topic.value.trim(); if (!t) return; p.loops.push({ id: uid(), topic: t, note: '', done: false, added: today() }); await save(p); viewPerson(p.id); };
+  app.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => { const l = p.loops.find(x => x.id === b.dataset.done); l.done = true; l.doneDate = today(); p.timeline.push({ id: uid(), date: today(), kind: 'update', text: 'Updated them about: ' + l.topic }); await save(p); viewPerson(p.id); });
+  app.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => { const l = p.loops.find(x => x.id === b.dataset.undo); l.done = false; l.doneDate = ''; await save(p); viewPerson(p.id); });
+  $('#addev').onsubmit = async e => { e.preventDefault(); const f = e.target; const text = f.text.value.trim(); if (!text) { f.text.focus(); return; } p.timeline.push({ id: uid(), date: normDate(f.date.value) || today(), kind: f.kind.value, text }); await save(p); viewPerson(p.id); };
+  app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Delete this timeline entry?')) return; p.timeline = p.timeline.filter(x => x.id !== b.dataset.del); await save(p); viewPerson(p.id); });
+}
+
+function viewEdit(id) {
+  setTab('');
+  const isNew = !id; const p = isNew ? norm({ name: ' ' }) : byId.get(id);
+  if (!p) { location.hash = ''; return; }
+  if (isNew) p.name = '';
+  const via = p.metThroughId && byId.get(p.metThroughId) ? byId.get(p.metThroughId).name : (p.metThrough || '');
+  let photoData = null, photoRemoved = false;
+  const f = (n, l, v, t = 'text', ph = '', extra = '') => `<label for="f_${n}">${l}</label><input id="f_${n}" name="${n}" type="${t}" value="${esc(v)}" placeholder="${esc(ph)}" ${extra}>`;
+  app.innerHTML = `<div class="view">
+  <div class="top"><a class="btn ghost" href="${isNew ? '#' : '#p/' + p.id}">Cancel</a><button class="btn pri sm" form="pf">Save</button></div>
+  <h1>${isNew ? 'New person' : 'Edit'}</h1>
+  <form id="pf" autocomplete="off">
+    <div style="display:flex;gap:14px;align-items:center">${avatar(p, 'lg')}<div class="stack" style="flex:1"><label class="btn sm" style="margin:0;color:var(--blue)">Add photo<input type="file" accept="image/*" id="ph" hidden></label>${p.hasPhoto ? '<button type="button" class="btn sm ghost danger" id="rmph">Remove photo</button>' : ''}</div></div>
+    ${f('name', 'Name', p.name, 'text', 'First and last name', 'required autocapitalize="words"')}
+    <div class="grid2"><div>${f('role', 'What they do', p.role, 'text', 'Product manager')}</div><div>${f('company', 'Company / org', p.company, 'text', 'Stripe')}</div></div>
+    ${f('howMet', 'How you met', p.howMet, 'text', 'Stern alumni mixer')}
+    <div class="grid2"><div>${f('metDate', 'When you met', p.metDate, 'text', '2024-06-15, 2024-06 or 2024', 'inputmode="numeric"')}</div><div><label for="f_via">Met through</label><input id="f_via" name="via" list="names" value="${esc(via)}" placeholder="Who introduced you"></div></div>
+    <datalist id="names">${people.filter(x => x.id !== p.id).slice(0, 2000).map(x => `<option value="${esc(x.name)}">`).join('')}</datalist>
+    <label for="f_about">Fun facts / what to remember</label><textarea id="f_about" name="about" placeholder="Training for the NYC marathon. Has a dog named Biscuit. Thinking about leaving consulting.">${esc(p.about)}</textarea>
+    ${f('tags', 'Interests, sports, groups (commas)', p.tags.join(', '), 'text', 'rugby, climbing, YC founder')}
+    ${f('schools', 'Schools / alumni of (commas)', p.schools.join(', '), 'text', 'NYU Stern, Exeter')}
+    ${isNew ? `<label for="f_first">First note</label><textarea id="f_first" name="first" placeholder="What you talked about. This becomes the first entry on their timeline."></textarea>` : ''}
+    <h2>Contact</h2>
+    <div class="grid2"><div>${f('phone', 'Phone', p.phone, 'tel', '(555) 123-4567')}</div><div>${f('email', 'Email', p.email, 'email', 'name@email.com', 'autocapitalize="off"')}</div></div>
+    <div class="grid2"><div>${f('linkedin', 'LinkedIn', p.linkedin, 'url', 'linkedin.com/in/…', 'autocapitalize="off"')}</div><div>${f('location', 'City', p.location, 'text', 'Brooklyn')}</div></div>
+    <label for="f_cad">Regular check-in</label><select id="f_cad" name="cadence">${CADENCE.map(([v, l]) => `<option value="${v}"${v === p.cadence ? ' selected' : ''}>${l}</option>`).join('')}</select>
+    <p style="margin-top:22px"><button class="btn pri" style="width:100%">Save</button></p>
+    ${isNew ? '' : '<p><button type="button" class="btn danger" id="delp" style="width:100%">Delete this person</button></p>'}
+  </form></div>`;
+  hydrateAvatars();
+  if (isNew) setTimeout(() => $('#f_name').focus(), 50);
+  $('#ph').onchange = async e => { const file = e.target.files[0]; if (!file) return; try { photoData = await resizeImage(file); photoRemoved = false; app.querySelector('.av.lg').innerHTML = `<img alt="" src="${photoData}">`; } catch (err) { toast(err.message); } };
+  const rm = $('#rmph'); if (rm) rm.onclick = () => { photoRemoved = true; photoData = null; app.querySelector('.av.lg').textContent = initials(p.name); rm.remove(); };
+  const del = $('#delp'); if (del) del.onclick = async () => { if (!confirm('Delete ' + p.name + ' and all their notes? This can\'t be undone.')) return; if (await removePerson(p.id)) { toast('Deleted'); location.hash = ''; } };
+  $('#pf').onsubmit = async e => {
+    e.preventDefault(); const fd = new FormData(e.target); const g = k => String(fd.get(k) || '').trim();
+    const n = Object.assign({}, p, { name: g('name'), role: g('role'), company: g('company'), howMet: g('howMet'), metDate: normDate(g('metDate')), about: g('about'), tags: list(g('tags')), schools: list(g('schools')), phone: g('phone'), email: g('email'), linkedin: g('linkedin'), location: g('location'), cadence: +g('cadence') || 0 });
+    if (g('metDate') && !n.metDate) { toast('Use a date like 2024-06-15, 2024-06 or 2024'); $('#f_metDate').focus(); return; }
+    const v = g('via'); const match = v && people.find(x => x.id !== p.id && x.name.toLowerCase() === v.toLowerCase());
+    n.metThroughId = match ? match.id : ''; n.metThrough = match ? '' : v;
+    if (isNew) { n.timeline = []; const fn = g('first'); if (fn || n.howMet) n.timeline.push({ id: uid(), date: n.metDate || today(), kind: 'met', text: fn }); if (!n.metDate) n.metDate = today(); }
+    if (photoData) n.hasPhoto = true;
+    if (photoRemoved) n.hasPhoto = false;
+    const saved = await save(n); if (!saved) return;
+    if (photoData) { const { error } = await sb.from('photos').upsert({ person_id: n.id, img: photoData }); if (error) toast('Photo not saved: ' + error.message, 5000); else { photos.set(n.id, photoData); idb.set('ph:' + n.id, photoData); } }
+    if (photoRemoved) { await sb.from('photos').delete().eq('person_id', n.id); photos.delete(n.id); idb.del('ph:' + n.id); }
+    location.hash = '#p/' + n.id;
+  };
+}
+
+function viewLoops() {
+  setTab('loops');
+  const toks = loopQ.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  const all = openLoops();
+  const hits = toks.length ? all.filter(({ p, l }) => { const h = (l.topic + ' ' + l.note).toLowerCase(); return toks.some(t => h.includes(t)); }) : all;
+  const loopIds = new Set(hits.map(x => x.p.id));
+  const maybe = toks.length ? people.filter(p => !loopIds.has(p.id) && toks.every(t => hay(p).includes(t))).slice(0, 12) : [];
+  const groups = new Map(); for (const x of hits) { if (!groups.has(x.p.id)) groups.set(x.p.id, []); groups.get(x.p.id).push(x.l); }
+  app.innerHTML = `<div class="view"><h1>In the loop</h1>
+  <p class="mute" style="margin-top:-6px">Something happen? Type it, and see everyone who wanted to hear about it.</p>
+  <div class="search"><input type="search" id="lq" placeholder="paper, new job, Stripe offer, the game…" value="${esc(loopQ)}" autocomplete="off"></div>
+  ${!all.length ? `<div class="empty">No open updates. On anyone's page, add things under “Keep them in the loop about”.</div>` : ''}
+  ${all.length && !hits.length ? `<div class="empty">No one is waiting on “${esc(loopQ)}”.</div>` : ''}
+  ${groups.size ? `<p class="small mute" style="margin:0 0 8px">${hits.length} update${hits.length === 1 ? '' : 's'} for ${groups.size} ${groups.size === 1 ? 'person' : 'people'}</p><div class="stack">${[...groups].map(([pid, ls]) => { const p = byId.get(pid); return `<div class="sec"><a href="#p/${p.id}" style="display:flex;gap:10px;align-items:center;color:var(--ink)">${avatar(p)}<div><div style="font-weight:600">${esc(p.name)}</div><div class="small mute">${esc(subline(p))}</div></div></a>
+    ${ls.map(l => `<div class="loop" style="margin-top:10px"><div class="t"><div class="tp">${toks.length ? hl(l.topic, toks) : esc(l.topic)}</div>${l.note ? `<div class="small mute">${esc(l.note)}</div>` : ''}<div class="inline" style="margin-top:8px;flex-wrap:wrap">${p.phone ? `<a class="btn sm" href="${smsHref(p, 'Hey ' + first(p.name) + '! Wanted to let you know about ' + l.topic + ' — ')}">Text</a>` : ''}${p.email ? `<a class="btn sm" href="mailto:${esc(p.email)}?subject=${encodeURIComponent('Quick update: ' + l.topic)}">Email</a>` : ''}<button class="btn sm pri" data-done="${p.id}|${l.id}">Mark updated</button></div></div></div>`).join('')}</div>`; }).join('')}</div>` : ''}
+  ${maybe.length ? `<h2>Might also care</h2><p class="small mute" style="margin-top:-4px">People whose notes mention “${esc(loopQ)}”</p><div class="list">${maybe.map(p => personRow(p, toks)).join('')}</div>` : ''}
+  </div>`;
+  hydrateAvatars();
+  const q = $('#lq'); let t; q.oninput = () => { clearTimeout(t); t = setTimeout(() => { loopQ = q.value; const pos = q.selectionStart; viewLoops(); const n = $('#lq'); n.focus(); try { n.setSelectionRange(pos, pos); } catch {} }, 200); };
+  app.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => { const [pid, lid] = b.dataset.done.split('|'); const p = byId.get(pid); const l = p.loops.find(x => x.id === lid); l.done = true; l.doneDate = today(); p.timeline.push({ id: uid(), date: today(), kind: 'update', text: 'Updated them about: ' + l.topic }); await save(p, true); toast('Marked ' + first(p.name) + ' as updated'); viewLoops(); });
+}
+
+function viewSettings() {
+  setTab('settings');
+  app.innerHTML = `<div class="view"><h1>More</h1>
+  <div class="list">
+    <a class="row" href="#import"><div class="t"><div class="n">Import people</div><div class="s">Paste or open a file of past notes or a backup</div></div>›</a>
+    <button class="row" id="exp" style="width:100%;border:0;background:none;text-align:left;font:inherit;cursor:pointer"><div class="t"><div class="n">Download a backup</div><div class="s">Everyone and all notes as one JSON file</div></div>›</button>
+    <button class="row" id="refresh" style="width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;font:inherit;cursor:pointer"><div class="t"><div class="n">Refresh from the cloud</div><div class="s">Pull changes made on another device</div></div>›</button>
+  </div>
+  <h2>Account</h2>
+  <div class="sec"><p style="margin:0 0 10px">Signed in as <b>${esc(user.email)}</b></p><p class="small mute" style="margin:0 0 12px">${people.length} people · Supabase project ${esc((cfgGet() || {}).url || '')}</p>
+  <div class="inline" style="flex-wrap:wrap"><button class="btn" id="out">Sign out</button><button class="btn ghost danger" id="reset">Change database connection</button></div></div>
+  <h2>Add to your home screen</h2><p class="small mute">In Safari, tap Share → Add to Home Screen. Rolo then opens full-screen like a normal app.</p>
+  </div>`;
+  $('#exp').onclick = exportBackup;
+  $('#refresh').onclick = async () => { try { await loadAll(); toast('Up to date · ' + people.length + ' people'); updateDot(); } catch (e) { toast('Could not refresh: ' + (e.message || e), 5000); } };
+  $('#out').onclick = async () => { await sb.auth.signOut(); idb.del(cacheKey()); location.hash = ''; location.reload(); };
+  $('#reset').onclick = () => { if (!confirm('Disconnect this device from your database? Your data stays in Supabase.')) return; try { localStorage.removeItem('rolo_cfg'); } catch {} location.hash = ''; location.reload(); };
+}
+
+const AI_PROMPT = `Convert my notes below into JSON for my contacts app. Output ONLY a JSON array, no commentary, no code fences.
+
+One object per person:
+{
+  "name": "First Last",
+  "role": "what they do / job title",
+  "company": "company or organization",
+  "location": "city",
+  "phone": "", "email": "", "linkedin": "",
+  "howMet": "short phrase, e.g. 'Networking call during Goldman internship'",
+  "metDate": "YYYY-MM-DD, or YYYY-MM, or YYYY if that's all that's known",
+  "metThrough": "name of who introduced us, if any",
+  "schools": ["schools / alumni groups"],
+  "tags": ["interests, sports, hobbies, groups, industries - short lowercase words"],
+  "about": "2-4 sentences: who they are, fun facts, what to remember before seeing them again",
+  "timeline": [ { "date": "YYYY-MM-DD (or YYYY-MM / YYYY)", "kind": "met|call|coffee|event|note|update|msg", "text": "what we talked about, keep the useful detail" } ],
+  "loops": [ { "topic": "something I should update them about later", "note": "why / context" } ]
+}
+
+Rules: keep every useful detail from my notes somewhere (usually the timeline text). Don't invent anything; leave a field "" or [] if unknown. Each separate conversation with the same person is its own timeline entry. If I said I'd follow up with someone about something, or they asked to hear about something, put it in "loops".
+
+My notes:
+`;
+
+function viewImport() {
+  setTab('settings');
+  let parsed = null;
+  app.innerHTML = `<div class="view"><div class="top"><a class="btn ghost" href="#settings">‹ More</a></div><h1>Import</h1>
+  <div class="sec stack"><div style="font-weight:600">Turning messy notes into people</div>
+  <p class="small mute" style="margin:0">1. Copy the prompt below. 2. Paste it into any AI chat (Claude, ChatGPT…) followed by your notes. 3. Paste the answer it gives you into the box below.</p>
+  <button class="btn" id="cp">Copy the prompt</button></div>
+  <label for="ij">Paste JSON (from an AI chat or a backup)</label><textarea id="ij" style="min-height:160px;font-family:ui-monospace,Menlo,monospace;font-size:13px" placeholder='[{"name": "Jake Chen", …}]'></textarea>
+  <p class="inline" style="margin-top:10px"><label class="btn sm" style="margin:0;color:var(--blue)">Open a file<input type="file" id="if" accept=".json,application/json,text/plain" hidden></label><span class="small mute" id="ist"></span></p>
+  <div id="prev"></div></div>`;
+  $('#cp').onclick = async () => { try { await navigator.clipboard.writeText(AI_PROMPT); toast('Prompt copied'); } catch { $('#ij').value = AI_PROMPT; toast('Copy it from the box'); } };
+  const check = () => {
+    const raw = $('#ij').value.trim(); const st = $('#ist'), pv = $('#prev'); parsed = null; pv.innerHTML = '';
+    if (!raw) { st.textContent = ''; return; }
+    try {
+      let j = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, ''));
+      if (!Array.isArray(j)) j = j.people || j.contacts || [j];
+      parsed = j.filter(x => x && x.name);
+      const upd = parsed.filter(x => isUuid(x.id) && byId.has(x.id)).length;
+      st.textContent = '';
+      pv.innerHTML = `<div class="sec" style="margin-top:12px"><p style="margin:0 0 8px"><b>${parsed.length}</b> ${parsed.length === 1 ? 'person' : 'people'} found${upd ? ` (${upd} already here, will be updated)` : ''}</p><p class="small mute" style="margin:0 0 10px">${parsed.slice(0, 12).map(x => esc(x.name)).join(', ')}${parsed.length > 12 ? '…' : ''}</p><button class="btn pri" id="go" style="width:100%">Import ${parsed.length}</button></div>`;
+      $('#go').onclick = doImport;
+    } catch (e) { st.textContent = 'That isn\'t valid JSON yet: ' + e.message; }
+  };
+  let t; $('#ij').oninput = () => { clearTimeout(t); t = setTimeout(check, 300); };
+  $('#if').onchange = async e => { const file = e.target.files[0]; if (!file) return; $('#ij').value = await file.text(); check(); };
+  async function doImport() {
+    const btn = $('#go'); btn.disabled = true; btn.textContent = 'Importing…';
+    const nameIx = new Map(people.map(p => [p.name.toLowerCase(), p.id]));
+    const incoming = parsed.map(x => { const p = norm(Object.assign({}, x, { id: isUuid(x.id) ? x.id : undefined })); if (byId.has(p.id)) p.createdAt = byId.get(p.id).createdAt; p.createdAt = p.createdAt || new Date().toISOString(); p.updatedAt = new Date().toISOString(); nameIx.set(p.name.toLowerCase(), p.id); return p; });
+    for (const p of incoming) { if (!p.metThroughId && p.metThrough) { const m = nameIx.get(p.metThrough.toLowerCase()); if (m && m !== p.id) { p.metThroughId = m; p.metThrough = ''; } } delete p.photo; }
+    const photoRows = parsed.filter(x => x.photo && typeof x.photo === 'string' && x.photo.startsWith('data:image')).map(x => ({ id: incoming[parsed.indexOf(x)].id, img: x.photo }));
+    for (let i = 0; i < incoming.length; i += 300) {
+      const chunk = incoming.slice(i, i + 300);
+      const { error } = await sb.from('people').upsert(chunk.map(p => ({ id: p.id, data: strip(p), updated_at: p.updatedAt })));
+      if (error) { toast('Import stopped: ' + error.message, 6000); btn.disabled = false; btn.textContent = 'Try again'; return; }
+      btn.textContent = `Importing… ${Math.min(i + 300, incoming.length)}/${incoming.length}`;
+    }
+    for (const r of photoRows) { await sb.from('photos').upsert({ person_id: r.id, img: r.img }); photos.set(r.id, r.img); }
+    for (const p of incoming) { if (photoRows.find(r => r.id === p.id)) p.hasPhoto = true; const i = people.findIndex(x => x.id === p.id); if (i >= 0) people[i] = p; else people.push(p); byId.set(p.id, p); }
+    hayMap.clear(); sortPeople(); cacheSoon(); updateDot();
+    toast('Imported ' + incoming.length + (incoming.length === 1 ? ' person' : ' people'));
+    location.hash = '';
+  }
+}
+
+async function exportBackup() {
+  toast('Preparing backup…');
+  const out = [];
+  for (const p of people) { const o = Object.assign({}, p); if (p.hasPhoto) { const img = await getPhoto(p.id); if (img) o.photo = img; } out.push(o); }
+  const blob = new Blob([JSON.stringify({ app: 'rolo', exported: new Date().toISOString(), people: out }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rolo-backup-' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+function downloadVcf(p) {
+  const e = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  const parts = p.name.trim().split(/\s+/); const last = parts.length > 1 ? parts.pop() : ''; const firstN = parts.join(' ');
+  const note = [p.howMet && 'Met: ' + p.howMet + (p.metDate ? ' (' + fmtDate(p.metDate) + ')' : ''), p.about].filter(Boolean).join('\n');
+  const lines = ['BEGIN:VCARD', 'VERSION:3.0', `N:${e(last)};${e(firstN)};;;`, `FN:${e(p.name)}`];
+  if (p.company) lines.push(`ORG:${e(p.company)}`); if (p.role) lines.push(`TITLE:${e(p.role)}`);
+  if (p.phone) lines.push(`TEL;TYPE=CELL:${e(p.phone)}`); if (p.email) lines.push(`EMAIL;TYPE=INTERNET:${e(p.email)}`);
+  if (p.linkedin) lines.push(`URL:${e(p.linkedin)}`); if (note) lines.push(`NOTE:${e(note)}`);
+  const ph = photos.get(p.id); if (ph) lines.push('PHOTO;ENCODING=b;TYPE=JPEG:' + ph.split(',')[1]);
+  lines.push('END:VCARD');
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/vcard' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = p.name.replace(/[^\w ]+/g, '').trim() + '.vcf'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+/* ---------- setup + sign in ---------- */
+const SQL = `create table if not exists public.people (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+create table if not exists public.photos (
+  person_id uuid primary key references public.people(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  img text not null
+);
+alter table public.people enable row level security;
+alter table public.photos enable row level security;
+drop policy if exists "own people" on public.people;
+create policy "own people" on public.people for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "own photos" on public.photos;
+create policy "own photos" on public.photos for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists people_user_idx on public.people(user_id);
+grant select, insert, update, delete on public.people, public.photos to authenticated;`;
+
+function viewSetup(err) {
+  $('#tabbar').hidden = true;
+  const c = cfgGet() || {};
+  app.innerHTML = `<div class="view"><h1>Connect your database</h1>
+  <p class="mute">One-time setup. Rolo keeps your people in your own free Supabase project, so it syncs across devices and belongs to you.</p>
+  ${err ? `<p style="color:var(--red)">${esc(err)}</p>` : ''}
+  <div class="sec stack"><div style="font-weight:600">1. Create the tables</div><p class="small mute" style="margin:0">In Supabase, open SQL Editor → New query, paste this, press Run.</p><pre class="code">${esc(SQL)}</pre><button class="btn sm" id="cps" type="button">Copy SQL</button></div>
+  <form id="cf" class="sec" style="margin-top:12px"><div style="font-weight:600">2. Paste your project's details</div><p class="small mute" style="margin:4px 0 0">Project Settings → API (or Data API / API Keys).</p>
+  <label for="cu">Project URL</label><input id="cu" type="url" value="${esc(c.url || '')}" placeholder="https://abcd1234.supabase.co" autocapitalize="off" required>
+  <label for="ck">Anon / publishable key</label><input id="ck" type="text" value="${esc(c.key || '')}" placeholder="eyJ… or sb_publishable_…" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+  <p class="hint">This key is safe to use in an app; your data is protected by your login.</p>
+  <p style="margin-top:14px"><button class="btn pri" style="width:100%">Connect</button></p></form></div>`;
+  $('#cps').onclick = async () => { try { await navigator.clipboard.writeText(SQL); toast('SQL copied'); } catch { toast('Select and copy the text above'); } };
+  $('#cf').onsubmit = e => { e.preventDefault(); const url = $('#cu').value.trim().replace(/\/+$/, ''); const key = $('#ck').value.trim(); if (!/^https:\/\//.test(url)) { toast('The URL should start with https://'); return; } cfgSet({ url, key }); boot(); };
+}
+
+function viewLogin(msg) {
+  $('#tabbar').hidden = true;
+  let mode = 'in';
+  const draw = (m) => {
+    app.innerHTML = `<div class="view"><h1 style="margin-top:28px">Rolo</h1><p class="mute">The people you meet, and what to remember about them.</p>
+    ${m ? `<p style="color:var(--red)">${esc(m)}</p>` : ''}
+    <form id="lf" class="sec"><label for="le">Email</label><input id="le" type="email" autocomplete="email" autocapitalize="off" required>
+    <label for="lp">Password</label><input id="lp" type="password" autocomplete="${mode === 'in' ? 'current-password' : 'new-password'}" minlength="6" required>
+    <p style="margin-top:16px"><button class="btn pri" style="width:100%">${mode === 'in' ? 'Sign in' : 'Create account'}</button></p></form>
+    <p style="text-align:center"><button class="btn ghost" id="sw">${mode === 'in' ? 'First time? Create your account' : 'Have an account? Sign in'}</button></p>
+    <p style="text-align:center"><button class="btn ghost small mute" id="rc">Change database connection</button></p></div>`;
+    $('#sw').onclick = () => { mode = mode === 'in' ? 'up' : 'in'; draw(); };
+    $('#rc').onclick = () => viewSetup();
+    $('#lf').onsubmit = async e => {
+      e.preventDefault(); const email = $('#le').value.trim(), password = $('#lp').value; const b = e.target.querySelector('button'); b.disabled = true; b.textContent = 'One moment…';
+      try {
+        const r = mode === 'in' ? await sb.auth.signInWithPassword({ email, password }) : await sb.auth.signUp({ email, password });
+        if (r.error) throw r.error;
+        if (!r.data.session) { draw('Account created. Check your email for a confirmation link, then come back and sign in. (Or turn off “Confirm email” in Supabase → Authentication.)'); mode = 'in'; return; }
+        boot();
+      } catch (err) { draw(/fetch/i.test(err.message) ? 'Could not reach your database. Check the project URL, or the project may be paused (open supabase.com and press Restore).' : err.message); }
+    };
+  };
+  draw(msg);
+}
+
+/* ---------- router + boot ---------- */
+function route() {
+  if (!user) return;
+  $('#tabbar').hidden = false; updateDot();
+  const h = location.hash.slice(1);
+  if (h.startsWith('p/')) viewPerson(h.slice(2));
+  else if (h.startsWith('edit/')) viewEdit(h.slice(5));
+  else if (h === 'new') viewEdit(null);
+  else if (h === 'loops') viewLoops();
+  else if (h === 'settings') viewSettings();
+  else if (h === 'import') viewImport();
+  else viewHome();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+async function boot() {
+  if (!window.supabase) { app.innerHTML = '<div class="empty">Could not load. Check your internet connection and reopen the app.</div>'; return; }
+  const c = cfgGet(); if (!c || !c.url || !c.key) { viewSetup(); return; }
+  try { sb = window.supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'rolo-auth' } }); }
+  catch (e) { viewSetup('That URL or key didn\'t work: ' + e.message); return; }
+  const { data } = await sb.auth.getSession();
+  if (!data || !data.session) { viewLogin(); return; }
+  user = data.session.user;
+  const cached = await idb.get(cacheKey());
+  if (cached && cached.length) { setPeople(cached); route(); }
+  else app.innerHTML = '<p class="mute">Loading your people…</p>';
+  try { await loadAll(); route(); }
+  catch (e) {
+    const msg = String(e.message || e);
+    if (/relation .* does not exist|schema cache/i.test(msg)) { viewSetup('The tables aren\'t set up yet. Run the SQL in step 1, then press Connect.'); return; }
+    if (cached && cached.length) toast('Offline: showing your saved copy', 4000);
+    else app.innerHTML = `<div class="empty"><p>Couldn't reach your database.</p><p class="small">${esc(msg)}</p><p class="small">If you haven't opened Rolo in a while, your free Supabase project may be paused. Open supabase.com and press Restore.</p><p><button class="btn" onclick="location.reload()">Try again</button></p></div>`;
+  }
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { user = null; viewLogin(); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && user) loadAll().then(() => { const h = location.hash.slice(1); if (!h.startsWith('edit/') && h !== 'new' && h !== 'import' && !document.activeElement.matches('input,textarea')) route(); }).catch(() => {}); });
+}
+boot();
+}
+</script>
+</body>
+</html>
